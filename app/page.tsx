@@ -66,7 +66,7 @@ const handleSendToDevice = (log: any) => {
             </button>
           </div>
 
-          <pre className="text-sm whitespace-pre-wrap break-words">
+          <pre className="text-sm whitespace-pre-wrap wrap-break-words">
             {JSON.stringify(latestLog, null, 2)}
           </pre>
         </div>
@@ -110,7 +110,7 @@ const handleSendToDevice = (log: any) => {
             </div>
 
             {/* CONTENT */}
-            <pre className="text-sm whitespace-pre-wrap break-words">
+            <pre className="text-sm whitespace-pre-wrap wrapp-break-words">
               {JSON.stringify(log, null, 2)}
             </pre>
           </div>
