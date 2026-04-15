@@ -1,65 +1,123 @@
-import Image from "next/image";
+"use client";
+import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
-export default function Home() {
+export default function LogsPage() {
+  const [logs, setLogs] = useState<any[]>([]);
+  const [latestLog, setLatestLog] = useState<any>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    const es = new EventSource("/api/log");
+
+    es.onmessage = (e) => {
+      const data = JSON.parse(e.data);
+
+      setLatestLog(data); // 🔥 latest
+      setLogs((prev) => [...prev, data]);
+
+      setTimeout(() => {
+        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 50);
+    };
+
+    return () => es.close();
+  }, []);
+
+  // 🔥 send to home search
+const handleSendToDevice = (log: any) => {
+  const device =
+    log.deviceName ||
+    log.device ||
+    log.userAgent ||
+    "Unknown Device";
+
+  localStorage.setItem("selectedDevice", device);
+  router.push("/devices"); // ✅ change
+};
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <div className="min-h-screen bg-[#0d0d0d] text-white font-mono p-4">
+
+      {/* HEADER */}
+      <div className="flex justify-between items-center mb-4">
+        <h1 className="text-lg font-semibold">⚡ Live Logs</h1>
+
+        <button
+          onClick={() => setLogs([])}
+          className="px-3 py-1 bg-red-600 rounded text-sm"
+        >
+          Clear
+        </button>
+      </div>
+
+      {/* 🔥 LATEST LOG */}
+      {latestLog && (
+        <div className="mb-6 p-4 rounded-xl border border-green-500 bg-green-500/10">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-green-400 text-sm">🟢 Latest Log</span>
+
+            <button
+              onClick={() => handleSendToDevice(latestLog)}
+              className="text-xs px-2 py-1 bg-blue-600 rounded"
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+              View Device
+            </button>
+          </div>
+
+          <pre className="text-sm whitespace-pre-wrap break-words">
+            {JSON.stringify(latestLog, null, 2)}
+          </pre>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+      )}
+
+      {/* 🧠 ALL LOGS */}
+      <div className="space-y-3">
+        {logs.map((log, i) => (
+          <div
+            key={i}
+            className="p-3 bg-[#1a1a1a] rounded-lg border border-zinc-800 hover:border-zinc-600 transition"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+            {/* TOP BAR */}
+            <div className="flex justify-between items-center mb-2 text-xs text-zinc-400">
+              <span>
+                [{log.time || "no-time"}]
+              </span>
+
+              <div className="flex gap-2">
+
+                {/* 🔥 DEVICE BUTTON */}
+                <button
+                  onClick={() => handleSendToDevice(log)}
+                  className="px-2 py-1 bg-blue-600 rounded text-white"
+                >
+                  Device
+                </button>
+
+                {/* COPY */}
+                <button
+                  onClick={() =>
+                    navigator.clipboard.writeText(
+                      JSON.stringify(log, null, 2)
+                    )
+                  }
+                  className="px-2 py-1 bg-zinc-700 rounded"
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
+
+            {/* CONTENT */}
+            <pre className="text-sm whitespace-pre-wrap break-words">
+              {JSON.stringify(log, null, 2)}
+            </pre>
+          </div>
+        ))}
+      </div>
+
+      <div ref={bottomRef} />
     </div>
   );
 }
