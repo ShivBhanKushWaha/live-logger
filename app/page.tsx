@@ -8,34 +8,36 @@ export default function LogsPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
+  // 🔥 POLLING (Vercel compatible)
   useEffect(() => {
-    const es = new EventSource("/api/log");
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch("/api/log");
+        const data = await res.json();
 
-    es.onmessage = (e) => {
-      const data = JSON.parse(e.data);
+        setLogs(data);
+        setLatestLog(data[data.length - 1]);
 
-      setLatestLog(data); // 🔥 latest
-      setLogs((prev) => [...prev, data]);
+        setTimeout(() => {
+          bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+        }, 50);
+      } catch {}
+    }, 1000);
 
-      setTimeout(() => {
-        bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-      }, 50);
-    };
-
-    return () => es.close();
+    return () => clearInterval(interval);
   }, []);
 
-  // 🔥 send to home search
-const handleSendToDevice = (log: any) => {
-  const device =
-    log.deviceName ||
-    log.device ||
-    log.userAgent ||
-    "Unknown Device";
+  // 🔥 send to /devices
+  const handleSendToDevice = (log: any) => {
+    const device =
+      log.deviceName ||
+      log.device ||
+      log.userAgent ||
+      "Unknown Device";
 
-  localStorage.setItem("selectedDevice", device);
-  router.push("/devices"); // ✅ change
-};
+    localStorage.setItem("selectedDevice", device);
+    router.push("/devices");
+  };
 
   return (
     <div className="min-h-screen bg-[#0d0d0d] text-white font-mono p-4">
@@ -48,7 +50,7 @@ const handleSendToDevice = (log: any) => {
           onClick={() => setLogs([])}
           className="px-3 py-1 bg-red-600 rounded text-sm"
         >
-          Clear
+          Clear UI
         </button>
       </div>
 
@@ -66,7 +68,7 @@ const handleSendToDevice = (log: any) => {
             </button>
           </div>
 
-          <pre className="text-sm whitespace-pre-wrap wrap-break-words">
+          <pre className="text-sm whitespace-pre-wrap wrap-break-word">
             {JSON.stringify(latestLog, null, 2)}
           </pre>
         </div>
@@ -81,16 +83,13 @@ const handleSendToDevice = (log: any) => {
           >
             {/* TOP BAR */}
             <div className="flex justify-between items-center mb-2 text-xs text-zinc-400">
-              <span>
-                [{log.time || "no-time"}]
-              </span>
+              <span>[{log.time || "no-time"}]</span>
 
               <div className="flex gap-2">
-
-                {/* 🔥 DEVICE BUTTON */}
+                {/* DEVICE */}
                 <button
                   onClick={() => handleSendToDevice(log)}
-                  className="px-2 py-1 bg-blue-600 rounded text-white"
+                  className="px-2 py-1 bg-blue-600 rounded"
                 >
                   Device
                 </button>
@@ -110,7 +109,7 @@ const handleSendToDevice = (log: any) => {
             </div>
 
             {/* CONTENT */}
-            <pre className="text-sm whitespace-pre-wrap wrapp-break-words">
+            <pre className="text-sm whitespace-pre-wrap wrap-break-word">
               {JSON.stringify(log, null, 2)}
             </pre>
           </div>
